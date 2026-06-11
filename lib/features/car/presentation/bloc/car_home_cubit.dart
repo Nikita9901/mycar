@@ -116,6 +116,44 @@ class CarHomeCubit extends Cubit<CarHomeState> {
     );
   }
 
+  // ── Техосмотр ─────────────────────────────────────────────────────────────
+
+  /// Сохраняет файл техосмотра: копирует в постоянное хранилище, записывает путь и дату.
+  Future<void> addTechInspection(String sourcePath, DateTime expiryDate) async {
+    final s = state;
+    if (s is! CarHomeLoaded) return;
+
+    final docsDir = await getApplicationDocumentsDirectory();
+    final ext = p.extension(sourcePath);
+    final destPath = p.join(docsDir.path, 'tech_inspection_${s.car.id}$ext');
+
+    await File(sourcePath).copy(destPath);
+
+    await _updateCar(s.car.copyWith(
+      techInspectionFilePath: destPath,
+      techInspectionExpiryDate: expiryDate,
+    ));
+  }
+
+  /// Удаляет локальный файл техосмотра и очищает поля в БД.
+  Future<void> removeTechInspection() async {
+    final s = state;
+    if (s is! CarHomeLoaded) return;
+
+    final path = s.car.techInspectionFilePath;
+    if (path != null) {
+      try {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+
+    await _updateCar(s.car.copyWith(
+      clearTechInspectionFilePath: true,
+      clearTechInspectionExpiryDate: true,
+    ));
+  }
+
   /// Записывает замену масла: сохраняет текущий пробег как точку отсчёта.
   Future<void> recordOilChange() async {
     final s = state;
@@ -134,7 +172,22 @@ class CarHomeCubit extends Cubit<CarHomeState> {
   Future<void> updateOdometer(int newOdometer, {bool force = false}) async {
     final s = state;
     if (s is! CarHomeLoaded) return;
-    await _updateCar(s.car.copyWith(currentOdometer: newOdometer));
+    final car = s.car;
+    Car updated = car.copyWith(currentOdometer: newOdometer);
+
+    // Вычитаем топливо пропорционально пройденному расстоянию
+    final distance = newOdometer - car.currentOdometer;
+    if (distance > 0 &&
+        car.avgFuelConsumption != null &&
+        car.currentFuelLevel != null) {
+      final consumed = (distance * car.avgFuelConsumption! / 100).round();
+      final newLevel = (car.currentFuelLevel! - consumed)
+          .clamp(0, car.fuelTankCapacity ?? car.currentFuelLevel!)
+          .toInt();
+      updated = updated.copyWith(currentFuelLevel: newLevel);
+    }
+
+    await _updateCar(updated);
   }
 
   /// После удаления операции выставляет пробег = одометр последней по дате записи.
@@ -156,6 +209,18 @@ class CarHomeCubit extends Cubit<CarHomeState> {
     if (lastOdo != null && lastOdo != car.currentOdometer) {
       await _updateCar(car.copyWith(currentOdometer: lastOdo));
     }
+  }
+
+  /// Уменьшает уровень топлива по итогам поездки.
+  Future<void> updateFuelAfterTrip(double distanceKm) async {
+    final s = state;
+    if (s is! CarHomeLoaded) return;
+    final car = s.car;
+    if (car.currentFuelLevel == null || car.avgFuelConsumption == null || car.avgFuelConsumption! <= 0) return;
+    final consumed = (distanceKm * car.avgFuelConsumption! / 100).round();
+    if (consumed <= 0) return;
+    final newLevel = (car.currentFuelLevel! - consumed).clamp(0, car.fuelTankCapacity ?? car.currentFuelLevel!);
+    await _updateCar(car.copyWith(currentFuelLevel: newLevel));
   }
 
   Future<void> addRefueling(AddRefuelingParams params) => _addRefueling(params);

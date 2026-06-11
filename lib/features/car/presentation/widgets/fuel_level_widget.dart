@@ -7,15 +7,34 @@ import '../../domain/entities/car.dart';
 /// Карточка текущего уровня топлива.
 /// Показывается только если у авто задан объём бака.
 class FuelLevelWidget extends StatelessWidget {
-  const FuelLevelWidget({super.key, required this.car});
+  const FuelLevelWidget({
+    super.key,
+    required this.car,
+    this.liveDistanceKm,
+  });
   final Car car;
+
+  /// Расстояние текущей поездки в км (для расчёта расхода в реальном времени).
+  final double? liveDistanceKm;
 
   @override
   Widget build(BuildContext context) {
     final capacity = car.fuelTankCapacity;
     if (capacity == null) return const SizedBox.shrink();
 
-    final level = car.currentFuelLevel;
+    // Базовый уровень из БД
+    final baseLevel = car.currentFuelLevel;
+
+    // Рассчитываем израсходованное топливо во время текущей поездки
+    final avg = car.avgFuelConsumption;
+    final consumed = (liveDistanceKm != null && avg != null && avg > 0)
+        ? (liveDistanceKm! * avg / 100)
+        : 0.0;
+
+    final level = baseLevel != null
+        ? (baseLevel - consumed).clamp(0.0, capacity.toDouble()).round()
+        : null;
+
     final ratio =
         level != null ? (level / capacity).clamp(0.0, 1.0) : null;
 
@@ -28,7 +47,6 @@ class FuelLevelWidget extends StatelessWidget {
                 : AppColors.green;
 
     // Запас хода
-    final avg = car.avgFuelConsumption;
     final rangeKm =
         (level != null && avg != null && avg > 0)
             ? (level / avg * 100).round()

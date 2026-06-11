@@ -10,61 +10,87 @@ class TechStatusWidget extends StatelessWidget {
     required this.oilChangeKmLeft,
     required this.insuranceDaysLeft,
     this.insurancePdfPath,
+    this.techInspectionDaysLeft,
+    this.techInspectionFilePath,
     this.onOilTap,
     this.onInsuranceTap,
     this.onInsuranceRemove,
+    this.onTechInspectionTap,
+    this.onTechInspectionRemove,
   });
 
   final double oilChangeProgress;
   final int oilChangeKmLeft;
   final int? insuranceDaysLeft;
-
-  /// Путь к локальному PDF. Не null — файл загружен.
   final String? insurancePdfPath;
+  final int? techInspectionDaysLeft;
+  final String? techInspectionFilePath;
 
-  /// Вызывается при тапе на блок масла.
   final VoidCallback? onOilTap;
-
-  /// Вызывается при тапе на блок страховки.
   final VoidCallback? onInsuranceTap;
-
-  /// Вызывается при нажатии иконки удаления страховки.
   final VoidCallback? onInsuranceRemove;
+  final VoidCallback? onTechInspectionTap;
+  final VoidCallback? onTechInspectionRemove;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      // Два квадрата рядом — масло и страховка
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: onOilTap,
-              child: _StatusCard(
-                icon: Icons.oil_barrel_rounded,
-                title: 'Масло',
-                progress: oilChangeProgress,
-                accentColor: _oilColor(oilChangeProgress),
-                valueText: _oilValueText(oilChangeKmLeft),
-                statusLabel: oilChangeKmLeft > 0 ? 'до замены' : 'просрочено',
-                isWarning: oilChangeKmLeft <= 0,
-                hasTap: onOilTap != null,
+          // Ряд 1: масло + страховка
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onOilTap,
+                  child: _StatusCard(
+                    icon: Icons.oil_barrel_rounded,
+                    title: 'Масло',
+                    progress: oilChangeProgress,
+                    accentColor: _oilColor(oilChangeProgress),
+                    valueText: _oilValueText(oilChangeKmLeft),
+                    statusLabel: oilChangeKmLeft > 0 ? 'до замены' : 'просрочено',
+                    isWarning: oilChangeKmLeft <= 0,
+                    hasTap: onOilTap != null,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _DocumentCard(
+                  icon: Icons.shield_rounded,
+                  iconOutlined: Icons.shield_outlined,
+                  title: 'Страховка',
+                  progress: _daysProgress(insuranceDaysLeft),
+                  accentColor: _daysColor(insuranceDaysLeft),
+                  valueText: _daysValueText(insuranceDaysLeft),
+                  statusLabel: _daysStatusLabel(insuranceDaysLeft, hasFile: insurancePdfPath != null),
+                  isWarning: insuranceDaysLeft != null && insuranceDaysLeft! <= 30,
+                  hasFile: insurancePdfPath != null,
+                  onTap: onInsuranceTap,
+                  onRemove: onInsuranceRemove,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _InsuranceCard(
-              progress: _insuranceProgress(insuranceDaysLeft),
-              accentColor: _insuranceColor(insuranceDaysLeft),
-              valueText: _insuranceValueText(insuranceDaysLeft),
-              statusLabel: _insuranceStatusLabel(insuranceDaysLeft),
-              isWarning: insuranceDaysLeft != null && insuranceDaysLeft! <= 30,
-              hasPdf: insurancePdfPath != null,
-              onTap: onInsuranceTap,
-              onRemove: onInsuranceRemove,
-            ),
+
+          const SizedBox(height: 12),
+
+          // Ряд 2: техосмотр (полная ширина)
+          _DocumentCard(
+            icon: Icons.fact_check_rounded,
+            iconOutlined: Icons.fact_check_outlined,
+            title: 'Техосмотр',
+            progress: _daysProgress(techInspectionDaysLeft),
+            accentColor: _daysColor(techInspectionDaysLeft),
+            valueText: _daysValueText(techInspectionDaysLeft),
+            statusLabel: _daysStatusLabel(techInspectionDaysLeft, hasFile: techInspectionFilePath != null),
+            isWarning: techInspectionDaysLeft != null && techInspectionDaysLeft! <= 30,
+            hasFile: techInspectionFilePath != null,
+            onTap: onTechInspectionTap,
+            onRemove: onTechInspectionRemove,
+            fullWidth: true,
           ),
         ],
       ),
@@ -77,14 +103,14 @@ class TechStatusWidget extends StatelessWidget {
     return AppColors.red;
   }
 
-  Color _insuranceColor(int? days) {
+  Color _daysColor(int? days) {
     if (days == null) return AppColors.text3;
     if (days > 30) return AppColors.green;
     if (days > 7) return AppColors.yellow;
     return AppColors.red;
   }
 
-  double _insuranceProgress(int? days) {
+  double _daysProgress(int? days) {
     if (days == null) return 0.0;
     return (1.0 - days / 365.0).clamp(0.0, 1.0);
   }
@@ -94,15 +120,15 @@ class TechStatusWidget extends StatelessWidget {
     return _fmtKm(kmLeft);
   }
 
-  String _insuranceValueText(int? days) {
+  String _daysValueText(int? days) {
     if (days == null) return '—';
-    if (days <= 0) return 'Истекла';
+    if (days <= 0) return 'Истёк';
     return '$days\u00a0д';
   }
 
-  String _insuranceStatusLabel(int? days) {
-    if (days == null) return 'нет данных';
-    if (days <= 0) return 'истекла';
+  String _daysStatusLabel(int? days, {required bool hasFile}) {
+    if (days == null) return hasFile ? 'нет даты' : 'нажмите, чтобы добавить';
+    if (days <= 0) return 'истёк';
     if (days <= 7) return 'критично';
     if (days <= 30) return 'скоро конец';
     return 'действует';
@@ -238,27 +264,35 @@ class _StatusCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Интерактивная карточка страховки
+// Интерактивная карточка документа (страховка / техосмотр)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _InsuranceCard extends StatelessWidget {
-  const _InsuranceCard({
+class _DocumentCard extends StatelessWidget {
+  const _DocumentCard({
+    required this.icon,
+    required this.iconOutlined,
+    required this.title,
     required this.progress,
     required this.accentColor,
     required this.valueText,
     required this.statusLabel,
     required this.isWarning,
-    required this.hasPdf,
+    required this.hasFile,
+    this.fullWidth = false,
     this.onTap,
     this.onRemove,
   });
 
+  final IconData icon;
+  final IconData iconOutlined;
+  final String title;
   final double progress;
   final Color accentColor;
   final String valueText;
   final String statusLabel;
   final bool isWarning;
-  final bool hasPdf;
+  final bool hasFile;
+  final bool fullWidth;
   final VoidCallback? onTap;
   final VoidCallback? onRemove;
 
@@ -280,59 +314,121 @@ class _InsuranceCard extends StatelessWidget {
                   blurRadius: 20, offset: const Offset(0, 4))]
               : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 34, height: 34,
-                  decoration: BoxDecoration(
-                    color: accentColor.withAlpha(25),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    hasPdf ? Icons.shield_rounded : Icons.shield_outlined,
-                    size: 17, color: accentColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Страховка',
-                    style: GoogleFonts.manrope(fontSize: 13,
-                        fontWeight: FontWeight.w600, color: AppColors.text2),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Кнопка удаления PDF (только если файл загружен)
-                if (hasPdf && onRemove != null)
-                  GestureDetector(
-                    onTap: onRemove,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Icon(Icons.delete_outline_rounded,
-                          size: 16, color: AppColors.red.withAlpha(180)),
+        child: fullWidth
+            ? Row(
+                children: [
+                  // Левая часть: иконка + значение + статус
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(
+                                color: accentColor.withAlpha(25),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(hasFile ? icon : iconOutlined,
+                                  size: 17, color: accentColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(title,
+                                style: GoogleFonts.manrope(fontSize: 13,
+                                    fontWeight: FontWeight.w600, color: AppColors.text2),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (hasFile && onRemove != null)
+                              GestureDetector(
+                                onTap: onRemove,
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 4),
+                                  child: Icon(Icons.delete_outline_rounded,
+                                      size: 16, color: AppColors.red.withAlpha(180)),
+                                ),
+                              ),
+                            if (!hasFile)
+                              Icon(Icons.add_circle_outline_rounded,
+                                  size: 16, color: AppColors.text3),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(valueText,
+                              style: GoogleFonts.manrope(fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: accentColor, letterSpacing: -0.5, height: 1.0)),
+                            const SizedBox(width: 10),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(statusLabel,
+                                style: GoogleFonts.manrope(fontSize: 11,
+                                    fontWeight: FontWeight.w500, color: AppColors.text3)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _ArcProgressBar(progress: progress, color: accentColor),
+                      ],
                     ),
                   ),
-                // Индикатор наличия PDF
-                if (!hasPdf)
-                  Icon(Icons.add_circle_outline_rounded,
-                      size: 16, color: AppColors.text3),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(valueText,
-              style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w800,
-                  color: accentColor, letterSpacing: -0.5, height: 1.0)),
-            const SizedBox(height: 4),
-            Text(hasPdf ? statusLabel : 'нажмите, чтобы добавить',
-              style: GoogleFonts.manrope(fontSize: 11,
-                  fontWeight: FontWeight.w500, color: AppColors.text3)),
-            const SizedBox(height: 14),
-            _ArcProgressBar(progress: progress, color: accentColor),
-          ],
-        ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34, height: 34,
+                        decoration: BoxDecoration(
+                          color: accentColor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(hasFile ? icon : iconOutlined,
+                            size: 17, color: accentColor),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(title,
+                          style: GoogleFonts.manrope(fontSize: 13,
+                              fontWeight: FontWeight.w600, color: AppColors.text2),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (hasFile && onRemove != null)
+                        GestureDetector(
+                          onTap: onRemove,
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Icon(Icons.delete_outline_rounded,
+                                size: 16, color: AppColors.red.withAlpha(180)),
+                          ),
+                        ),
+                      if (!hasFile)
+                        Icon(Icons.add_circle_outline_rounded,
+                            size: 16, color: AppColors.text3),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(valueText,
+                    style: GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w800,
+                        color: accentColor, letterSpacing: -0.5, height: 1.0)),
+                  const SizedBox(height: 4),
+                  Text(statusLabel,
+                    style: GoogleFonts.manrope(fontSize: 11,
+                        fontWeight: FontWeight.w500, color: AppColors.text3)),
+                  const SizedBox(height: 14),
+                  _ArcProgressBar(progress: progress, color: accentColor),
+                ],
+              ),
       ),
     );
   }

@@ -35,6 +35,8 @@ class Car extends Equatable {
     this.avgFuelConsumption,
     this.fuelTankCapacity,
     this.currentFuelLevel,
+    this.techInspectionFilePath,
+    this.techInspectionExpiryDate,
   });
 
   final String id;
@@ -64,11 +66,21 @@ class Car extends Equatable {
   /// Примерное количество топлива в баке на момент добавления, литры.
   final int? currentFuelLevel;
 
+  /// Путь к локальному файлу техосмотра (PDF или изображение).
+  final String? techInspectionFilePath;
+
+  /// Дата окончания техосмотра.
+  final DateTime? techInspectionExpiryDate;
+
   String get displayName => '$brand $model';
 
   /// Дней до окончания страховки. Null если дата не указана.
   int? get insuranceDaysLeft => insuranceExpiryDate != null
       ? insuranceExpiryDate!.difference(DateTime.now()).inDays
+      : null;
+
+  int? get techInspectionDaysLeft => techInspectionExpiryDate != null
+      ? techInspectionExpiryDate!.difference(DateTime.now()).inDays
       : null;
 
   Car copyWith({
@@ -86,12 +98,16 @@ class Car extends Equatable {
     double? avgFuelConsumption,
     int? fuelTankCapacity,
     int? currentFuelLevel,
+    String? techInspectionFilePath,
+    DateTime? techInspectionExpiryDate,
     bool clearInsurancePdfPath = false,
     bool clearInsuranceExpiryDate = false,
     bool clearLastOilChangeOdometer = false,
     bool clearAvgFuelConsumption = false,
     bool clearFuelTankCapacity = false,
     bool clearCurrentFuelLevel = false,
+    bool clearTechInspectionFilePath = false,
+    bool clearTechInspectionExpiryDate = false,
   }) {
     return Car(
       id: id ?? this.id,
@@ -114,6 +130,10 @@ class Car extends Equatable {
           clearFuelTankCapacity ? null : (fuelTankCapacity ?? this.fuelTankCapacity),
       currentFuelLevel:
           clearCurrentFuelLevel ? null : (currentFuelLevel ?? this.currentFuelLevel),
+      techInspectionFilePath:
+          clearTechInspectionFilePath ? null : (techInspectionFilePath ?? this.techInspectionFilePath),
+      techInspectionExpiryDate:
+          clearTechInspectionExpiryDate ? null : (techInspectionExpiryDate ?? this.techInspectionExpiryDate),
     );
   }
 
@@ -122,5 +142,6 @@ class Car extends Equatable {
         id, brand, model, currentOdometer, licensePlate, vin,
         fuelType, createdAt, insurancePdfPath, insuranceExpiryDate,
         lastOilChangeOdometer, avgFuelConsumption, fuelTankCapacity, currentFuelLevel,
+        techInspectionFilePath, techInspectionExpiryDate,
       ];
 }

@@ -7,13 +7,17 @@ import 'package:open_filex/open_filex.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../bloc/car_home_cubit.dart';
 import '../bloc/car_home_state.dart';
+import '../../domain/entities/car.dart';
 import '../widgets/add_insurance_sheet.dart';
 import '../widgets/car_header_widget.dart';
 import '../widgets/oil_change_sheet.dart';
 import '../widgets/reminders_sheet.dart';
 import '../widgets/tech_status_widget.dart';
 import '../widgets/fuel_level_widget.dart';
+import '../../../trip/presentation/bloc/trip_tracking_cubit.dart';
+import '../../../trip/presentation/bloc/trip_tracking_state.dart';
 import '../widgets/last_refueling_widget.dart';
+import '../widgets/add_tech_inspection_sheet.dart';
 import '../../presentation/pages/settings_screen.dart';
 
 class CarHomeScreen extends StatelessWidget {
@@ -114,6 +118,8 @@ class _LoadedView extends StatelessWidget {
                 oilChangeKmLeft: state.oilChangeKmLeft,
                 insuranceDaysLeft: state.insuranceDaysLeft,
                 insurancePdfPath: state.car.insurancePdfPath,
+                techInspectionDaysLeft: state.car.techInspectionDaysLeft,
+                techInspectionFilePath: state.car.techInspectionFilePath,
                 onOilTap: () => OilChangeSheet.show(context),
                 onInsuranceTap: () {
                   final pdfPath = state.car.insurancePdfPath;
@@ -126,12 +132,23 @@ class _LoadedView extends StatelessWidget {
                 onInsuranceRemove: state.car.insurancePdfPath != null
                     ? () => cubit.removeInsurance()
                     : null,
+                onTechInspectionTap: () {
+                  final filePath = state.car.techInspectionFilePath;
+                  if (filePath != null) {
+                    OpenFilex.open(filePath);
+                  } else {
+                    AddTechInspectionSheet.show(context);
+                  }
+                },
+                onTechInspectionRemove: state.car.techInspectionFilePath != null
+                    ? () => cubit.removeTechInspection()
+                    : null,
               ),
 
               // ── Уровень топлива (только если задан объём бака) ───────
               if (state.car.fuelTankCapacity != null) ...[
                 const SizedBox(height: 16),
-                FuelLevelWidget(car: state.car),
+                _LiveFuelWidget(car: state.car),
               ],
 
               const SizedBox(height: 24),
@@ -320,5 +337,25 @@ class _ErrorView extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Обёртка над [FuelLevelWidget], которая читает текущее состояние поездки
+/// и передаёт пройденное расстояние для live-расчёта расхода топлива.
+class _LiveFuelWidget extends StatelessWidget {
+  const _LiveFuelWidget({required this.car});
+  final Car car;
+
+  @override
+  Widget build(BuildContext context) {
+    double? liveDistanceKm;
+    try {
+      final tripState = context.watch<TripTrackingCubit>().state;
+      if (tripState is TripInProgress) {
+        liveDistanceKm = tripState.distanceMeters / 1000;
+      }
+    } catch (_) {}
+
+    return FuelLevelWidget(car: car, liveDistanceKm: liveDistanceKm);
   }
 }

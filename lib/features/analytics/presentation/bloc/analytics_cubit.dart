@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../features/car/domain/entities/car.dart';
+import '../../../../features/car/domain/usecases/update_car.dart';
 import '../../../../features/car/domain/usecases/watch_all_cars.dart';
 import '../../../../features/expense/domain/entities/expense.dart';
 import '../../../../features/expense/domain/usecases/watch_expenses_for_car.dart';
@@ -17,14 +18,17 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
     required WatchAllCars watchAllCars,
     required WatchRefuelingsForCar watchRefuelingsForCar,
     required WatchExpensesForCar watchExpensesForCar,
+    required UpdateCar updateCar,
   })  : _watchAllCars = watchAllCars,
         _watchRefuelings = watchRefuelingsForCar,
         _watchExpenses = watchExpensesForCar,
+        _updateCar = updateCar,
         super(const AnalyticsLoading());
 
   final WatchAllCars _watchAllCars;
   final WatchRefuelingsForCar _watchRefuelings;
   final WatchExpensesForCar _watchExpenses;
+  final UpdateCar _updateCar;
 
   /// Переключатель монетизации. false = все функции бесплатны.
   /// Поменяй на false, чтобы включить пейволл.
@@ -118,8 +122,33 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
     final totalExpenses = expenses.fold(0.0, (s, e) => s + e.cost);
     final totalSpend = totalFuel + totalExpenses;
 
-    final (avgConsumption, consumptionIsFromCar) =
-        _calcAvgConsumption(refuelings, _currentCar?.avgFuelConsumption);
+    // Avg consumption считаем по ВСЕМ заправкам (не по периоду),
+    // чтобы значение было надёжным независимо от выбранного периода.
+    final (globalAvg, _) =
+        _calcAvgConsumption(_allRefuelings, null);
+
+    // Если удалось посчитать из данных — сохраняем в car,
+    // чтобы главный экран и поездки использовали актуальное значение.
+    final car = _currentCar;
+    if (car != null && globalAvg != null) {
+      final stored = car.avgFuelConsumption;
+      // Округляем до 1 знака перед сравнением, чтобы не обновлять при незначительных изменениях
+      final rounded = double.parse(globalAvg.toStringAsFixed(1));
+      final storedRounded = stored != null
+          ? double.parse(stored.toStringAsFixed(1))
+          : null;
+      if (rounded != storedRounded) {
+        _updateCar(car.copyWith(avgFuelConsumption: rounded));
+      }
+    }
+
+    // Для отображения в аналитике: из реальных данных или БК как fallback
+    final (avgConsumption, consumptionIsFromCar) = globalAvg != null
+        ? (globalAvg, false)
+        : (_currentCar?.avgFuelConsumption != null
+            ? (_currentCar!.avgFuelConsumption, true)
+            : (null, false));
+
     final costPerKm = _calcCostPerKm(refuelings, totalExpenses);
 
     final breakdown = _buildBreakdown(

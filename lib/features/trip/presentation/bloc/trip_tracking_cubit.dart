@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,6 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
 
   StreamSubscription<Position>? _positionSub;
   Timer? _uiTimer;
-  Timer? _notifTimer;
 
   Position? _lastPosition;
   double _totalDistanceMeters = 0;
@@ -42,29 +42,36 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
       speedKmh: 0,
     ));
 
-    // Таймер UI — каждую секунду
-    _uiTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    // Таймер UI — каждую секунду: обновляем UI и уведомление
+    _uiTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       _elapsedSeconds++;
       _emitProgress();
-    });
-
-    // Таймер уведомлений — каждые 10 секунд
-    _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _updateNotification();
+      // Проверяем флаг остановки от фонового уведомления
+      if (await TripNotificationService.instance.checkAndClearStopRequest()) {
+        stopTrip();
+      }
     });
     _updateNotification(); // сразу при старте
 
-    // GPS стрим
+    // GPS стрим — платформенные настройки
+    final locationSettings = Platform.isAndroid
+        ? AndroidSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+            intervalDuration: const Duration(seconds: 5),
+            foregroundNotificationConfig: const ForegroundNotificationConfig(
+              notificationTitle: 'MyCar',
+              notificationText: 'GPS активен — идёт запись пробега',
+            ),
+          )
+        : const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+          );
+
     _positionSub = Geolocator.getPositionStream(
-      locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
-        intervalDuration: const Duration(seconds: 5),
-        foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'MyCar',
-          notificationText: 'GPS активен — идёт запись пробега',
-        ),
-      ),
+      locationSettings: locationSettings,
     ).listen(_onPosition, onError: (_) {});
   }
 
@@ -134,8 +141,6 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
   Future<void> _stopTracking() async {
     _uiTimer?.cancel();
     _uiTimer = null;
-    _notifTimer?.cancel();
-    _notifTimer = null;
     await _positionSub?.cancel();
     _positionSub = null;
   }

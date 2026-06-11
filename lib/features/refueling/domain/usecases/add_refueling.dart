@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../entities/refueling.dart';
 import '../repositories/refueling_repository.dart';
+import '../../../car/domain/entities/car.dart';
 import '../../../car/domain/repositories/car_repository.dart';
 
 /// Параметры для создания новой записи о заправке.
@@ -56,10 +57,33 @@ class AddRefueling {
     // Сохраняем запись о заправке
     await _refuelingRepository.addRefueling(newRefueling);
 
-    // Обновляем одометр автомобиля, если новое значение больше текущего
+    // Обновляем одометр и уровень топлива автомобиля
     final car = await _carRepository.getCarById(params.carId);
-    if (car != null && params.odometer > car.currentOdometer) {
-      await _carRepository.updateOdometer(params.carId, params.odometer);
+    if (car == null) return;
+
+    Car updated = car;
+
+    // Обновляем одометр, если новое значение больше текущего
+    if (params.odometer > car.currentOdometer) {
+      updated = updated.copyWith(currentOdometer: params.odometer);
     }
+
+    // Обновляем уровень топлива, если бак задан
+    if (car.fuelTankCapacity != null) {
+      final int newLevel;
+      if (params.isFullTank) {
+        // Полный бак — ставим максимум
+        newLevel = car.fuelTankCapacity!;
+      } else {
+        // Частичная заправка — прибавляем литры к текущему уровню
+        final current = car.currentFuelLevel ?? 0;
+        newLevel = (current + params.liters.round())
+            .clamp(0, car.fuelTankCapacity!)
+            .toInt();
+      }
+      updated = updated.copyWith(currentFuelLevel: newLevel);
+    }
+
+    await _carRepository.updateCar(updated);
   }
 }

@@ -52,6 +52,12 @@ class CarTable extends Table {
   /// Примерное количество топлива в баке на момент добавления, литры.
   IntColumn get currentFuelLevel => integer().nullable()();
 
+  /// Путь к локальному файлу техосмотра (PDF или изображение). Null если файл не загружен.
+  TextColumn get techInspectionFilePath => text().nullable()();
+
+  /// Дата окончания техосмотра. Null если пользователь не указал.
+  DateTimeColumn get techInspectionExpiryDate => dateTime().nullable()();
+
   /// Первичный ключ — идентификатор UUID.
   @override
   Set<Column> get primaryKey => {id};

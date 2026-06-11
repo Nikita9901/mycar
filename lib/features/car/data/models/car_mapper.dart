@@ -22,6 +22,8 @@ class CarMapper {
       avgFuelConsumption: data.avgFuelConsumption,
       fuelTankCapacity: data.fuelTankCapacity,
       currentFuelLevel: data.currentFuelLevel,
+      techInspectionFilePath: data.techInspectionFilePath,
+      techInspectionExpiryDate: data.techInspectionExpiryDate,
     );
   }
 
@@ -41,6 +43,8 @@ class CarMapper {
       avgFuelConsumption: Value(car.avgFuelConsumption),
       fuelTankCapacity: Value(car.fuelTankCapacity),
       currentFuelLevel: Value(car.currentFuelLevel),
+      techInspectionFilePath: Value(car.techInspectionFilePath),
+      techInspectionExpiryDate: Value(car.techInspectionExpiryDate),
     );
   }
 }

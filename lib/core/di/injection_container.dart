@@ -99,5 +99,6 @@ Future<void> initDependencies() async {
         watchAllCars: sl(),
         watchRefuelingsForCar: sl(),
         watchExpensesForCar: sl(),
+        updateCar: sl(),
       ));
 }

@@ -270,7 +270,7 @@ class _LoadedView extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Переключатель периода
+// Переключатель периода — sliding segmented control
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _PeriodSelector extends StatelessWidget {
@@ -286,63 +286,95 @@ class _PeriodSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final periods = AnalyticsPeriod.values;
+    final selectedIndex = periods.indexOf(selected);
+
     return Container(
-      height: 40,
+      height: 44,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.bg2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border1, width: 0.5),
       ),
-      child: Row(
-        children: AnalyticsPeriod.values.map((period) {
-          final isSelected = period == selected;
-          final isLocked = !isPremium && period != AnalyticsPeriod.month;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth =
+              (constraints.maxWidth - 8) / periods.length;
 
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onSelect(period),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.bg4 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isLocked) ...[
-                      Icon(Icons.lock_rounded,
-                          size: 10, color: AppColors.text3),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(
-                      period.label,
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: isSelected
-                            ? AppColors.text1
-                            : AppColors.text3,
+          return Stack(
+            children: [
+              // Sliding indicator
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                left: selectedIndex * itemWidth,
+                top: 0,
+                bottom: 0,
+                width: itemWidth,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bg4,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(70),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+              // Labels
+              Row(
+                children: periods.map((period) {
+                  final isSelected = period == selected;
+                  final isLocked =
+                      !isPremium && period != AnalyticsPeriod.month;
+
+                  return GestureDetector(
+                    onTap: () => onSelect(period),
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: itemWidth,
+                      height: double.infinity,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isLocked) ...[
+                            Icon(
+                              Icons.lock_rounded,
+                              size: 10,
+                              color: isSelected
+                                  ? AppColors.text2
+                                  : AppColors.text3,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 180),
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.text1
+                                  : AppColors.text3,
+                            ),
+                            child: Text(period.label),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           );
-        }).toList(),
+        },
       ),
     );
   }

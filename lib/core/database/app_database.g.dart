@@ -155,6 +155,28 @@ class $CarTableTable extends CarTable
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _techInspectionFilePathMeta =
+      const VerificationMeta('techInspectionFilePath');
+  @override
+  late final GeneratedColumn<String> techInspectionFilePath =
+      GeneratedColumn<String>(
+        'tech_inspection_file_path',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _techInspectionExpiryDateMeta =
+      const VerificationMeta('techInspectionExpiryDate');
+  @override
+  late final GeneratedColumn<DateTime> techInspectionExpiryDate =
+      GeneratedColumn<DateTime>(
+        'tech_inspection_expiry_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -171,6 +193,8 @@ class $CarTableTable extends CarTable
     avgFuelConsumption,
     fuelTankCapacity,
     currentFuelLevel,
+    techInspectionFilePath,
+    techInspectionExpiryDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -299,6 +323,24 @@ class $CarTableTable extends CarTable
         ),
       );
     }
+    if (data.containsKey('tech_inspection_file_path')) {
+      context.handle(
+        _techInspectionFilePathMeta,
+        techInspectionFilePath.isAcceptableOrUnknown(
+          data['tech_inspection_file_path']!,
+          _techInspectionFilePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tech_inspection_expiry_date')) {
+      context.handle(
+        _techInspectionExpiryDateMeta,
+        techInspectionExpiryDate.isAcceptableOrUnknown(
+          data['tech_inspection_expiry_date']!,
+          _techInspectionExpiryDateMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -364,6 +406,14 @@ class $CarTableTable extends CarTable
         DriftSqlType.int,
         data['${effectivePrefix}current_fuel_level'],
       ),
+      techInspectionFilePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tech_inspection_file_path'],
+      ),
+      techInspectionExpiryDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}tech_inspection_expiry_date'],
+      ),
     );
   }
 
@@ -416,6 +466,12 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
 
   /// Примерное количество топлива в баке на момент добавления, литры.
   final int? currentFuelLevel;
+
+  /// Путь к локальному файлу техосмотра.
+  final String? techInspectionFilePath;
+
+  /// Дата окончания техосмотра.
+  final DateTime? techInspectionExpiryDate;
   const CarTableData({
     required this.id,
     required this.brand,
@@ -431,6 +487,8 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
     this.avgFuelConsumption,
     this.fuelTankCapacity,
     this.currentFuelLevel,
+    this.techInspectionFilePath,
+    this.techInspectionExpiryDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -465,6 +523,12 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
     if (!nullToAbsent || currentFuelLevel != null) {
       map['current_fuel_level'] = Variable<int>(currentFuelLevel);
     }
+    if (!nullToAbsent || techInspectionFilePath != null) {
+      map['tech_inspection_file_path'] = Variable<String>(techInspectionFilePath);
+    }
+    if (!nullToAbsent || techInspectionExpiryDate != null) {
+      map['tech_inspection_expiry_date'] = Variable<DateTime>(techInspectionExpiryDate);
+    }
     return map;
   }
 
@@ -498,6 +562,12 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
       currentFuelLevel: currentFuelLevel == null && nullToAbsent
           ? const Value.absent()
           : Value(currentFuelLevel),
+      techInspectionFilePath: techInspectionFilePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(techInspectionFilePath),
+      techInspectionExpiryDate: techInspectionExpiryDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(techInspectionExpiryDate),
     );
   }
 
@@ -527,6 +597,8 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
       ),
       fuelTankCapacity: serializer.fromJson<int?>(json['fuelTankCapacity']),
       currentFuelLevel: serializer.fromJson<int?>(json['currentFuelLevel']),
+      techInspectionFilePath: serializer.fromJson<String?>(json['techInspectionFilePath']),
+      techInspectionExpiryDate: serializer.fromJson<DateTime?>(json['techInspectionExpiryDate']),
     );
   }
   @override
@@ -547,6 +619,8 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
       'avgFuelConsumption': serializer.toJson<double?>(avgFuelConsumption),
       'fuelTankCapacity': serializer.toJson<int?>(fuelTankCapacity),
       'currentFuelLevel': serializer.toJson<int?>(currentFuelLevel),
+      'techInspectionFilePath': serializer.toJson<String?>(techInspectionFilePath),
+      'techInspectionExpiryDate': serializer.toJson<DateTime?>(techInspectionExpiryDate),
     };
   }
 
@@ -565,6 +639,8 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
     Value<double?> avgFuelConsumption = const Value.absent(),
     Value<int?> fuelTankCapacity = const Value.absent(),
     Value<int?> currentFuelLevel = const Value.absent(),
+    Value<String?> techInspectionFilePath = const Value.absent(),
+    Value<DateTime?> techInspectionExpiryDate = const Value.absent(),
   }) => CarTableData(
     id: id ?? this.id,
     brand: brand ?? this.brand,
@@ -592,6 +668,12 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
     currentFuelLevel: currentFuelLevel.present
         ? currentFuelLevel.value
         : this.currentFuelLevel,
+    techInspectionFilePath: techInspectionFilePath.present
+        ? techInspectionFilePath.value
+        : this.techInspectionFilePath,
+    techInspectionExpiryDate: techInspectionExpiryDate.present
+        ? techInspectionExpiryDate.value
+        : this.techInspectionExpiryDate,
   );
   CarTableData copyWithCompanion(CarTableCompanion data) {
     return CarTableData(
@@ -625,6 +707,12 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
       currentFuelLevel: data.currentFuelLevel.present
           ? data.currentFuelLevel.value
           : this.currentFuelLevel,
+      techInspectionFilePath: data.techInspectionFilePath.present
+          ? data.techInspectionFilePath.value
+          : this.techInspectionFilePath,
+      techInspectionExpiryDate: data.techInspectionExpiryDate.present
+          ? data.techInspectionExpiryDate.value
+          : this.techInspectionExpiryDate,
     );
   }
 
@@ -644,7 +732,9 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
           ..write('lastOilChangeOdometer: $lastOilChangeOdometer, ')
           ..write('avgFuelConsumption: $avgFuelConsumption, ')
           ..write('fuelTankCapacity: $fuelTankCapacity, ')
-          ..write('currentFuelLevel: $currentFuelLevel')
+          ..write('currentFuelLevel: $currentFuelLevel, ')
+          ..write('techInspectionFilePath: $techInspectionFilePath, ')
+          ..write('techInspectionExpiryDate: $techInspectionExpiryDate')
           ..write(')'))
         .toString();
   }
@@ -665,6 +755,8 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
     avgFuelConsumption,
     fuelTankCapacity,
     currentFuelLevel,
+    techInspectionFilePath,
+    techInspectionExpiryDate,
   );
   @override
   bool operator ==(Object other) =>
@@ -683,7 +775,9 @@ class CarTableData extends DataClass implements Insertable<CarTableData> {
           other.lastOilChangeOdometer == this.lastOilChangeOdometer &&
           other.avgFuelConsumption == this.avgFuelConsumption &&
           other.fuelTankCapacity == this.fuelTankCapacity &&
-          other.currentFuelLevel == this.currentFuelLevel);
+          other.currentFuelLevel == this.currentFuelLevel &&
+          other.techInspectionFilePath == this.techInspectionFilePath &&
+          other.techInspectionExpiryDate == this.techInspectionExpiryDate);
 }
 
 class CarTableCompanion extends UpdateCompanion<CarTableData> {
@@ -701,6 +795,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
   final Value<double?> avgFuelConsumption;
   final Value<int?> fuelTankCapacity;
   final Value<int?> currentFuelLevel;
+  final Value<String?> techInspectionFilePath;
+  final Value<DateTime?> techInspectionExpiryDate;
   final Value<int> rowid;
   const CarTableCompanion({
     this.id = const Value.absent(),
@@ -717,6 +813,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
     this.avgFuelConsumption = const Value.absent(),
     this.fuelTankCapacity = const Value.absent(),
     this.currentFuelLevel = const Value.absent(),
+    this.techInspectionFilePath = const Value.absent(),
+    this.techInspectionExpiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CarTableCompanion.insert({
@@ -734,6 +832,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
     this.avgFuelConsumption = const Value.absent(),
     this.fuelTankCapacity = const Value.absent(),
     this.currentFuelLevel = const Value.absent(),
+    this.techInspectionFilePath = const Value.absent(),
+    this.techInspectionExpiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        brand = Value(brand),
@@ -755,6 +855,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
     Expression<double>? avgFuelConsumption,
     Expression<int>? fuelTankCapacity,
     Expression<int>? currentFuelLevel,
+    Expression<String>? techInspectionFilePath,
+    Expression<DateTime>? techInspectionExpiryDate,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -775,6 +877,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
         'avg_fuel_consumption': avgFuelConsumption,
       if (fuelTankCapacity != null) 'fuel_tank_capacity': fuelTankCapacity,
       if (currentFuelLevel != null) 'current_fuel_level': currentFuelLevel,
+      if (techInspectionFilePath != null) 'tech_inspection_file_path': techInspectionFilePath,
+      if (techInspectionExpiryDate != null) 'tech_inspection_expiry_date': techInspectionExpiryDate,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -794,6 +898,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
     Value<double?>? avgFuelConsumption,
     Value<int?>? fuelTankCapacity,
     Value<int?>? currentFuelLevel,
+    Value<String?>? techInspectionFilePath,
+    Value<DateTime?>? techInspectionExpiryDate,
     Value<int>? rowid,
   }) {
     return CarTableCompanion(
@@ -812,6 +918,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
       avgFuelConsumption: avgFuelConsumption ?? this.avgFuelConsumption,
       fuelTankCapacity: fuelTankCapacity ?? this.fuelTankCapacity,
       currentFuelLevel: currentFuelLevel ?? this.currentFuelLevel,
+      techInspectionFilePath: techInspectionFilePath ?? this.techInspectionFilePath,
+      techInspectionExpiryDate: techInspectionExpiryDate ?? this.techInspectionExpiryDate,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -865,6 +973,12 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
     if (currentFuelLevel.present) {
       map['current_fuel_level'] = Variable<int>(currentFuelLevel.value);
     }
+    if (techInspectionFilePath.present) {
+      map['tech_inspection_file_path'] = Variable<String>(techInspectionFilePath.value);
+    }
+    if (techInspectionExpiryDate.present) {
+      map['tech_inspection_expiry_date'] = Variable<DateTime>(techInspectionExpiryDate.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -888,6 +1002,8 @@ class CarTableCompanion extends UpdateCompanion<CarTableData> {
           ..write('avgFuelConsumption: $avgFuelConsumption, ')
           ..write('fuelTankCapacity: $fuelTankCapacity, ')
           ..write('currentFuelLevel: $currentFuelLevel, ')
+          ..write('techInspectionFilePath: $techInspectionFilePath, ')
+          ..write('techInspectionExpiryDate: $techInspectionExpiryDate, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();

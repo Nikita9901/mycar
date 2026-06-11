@@ -33,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Версия схемы. При изменении таблиц — увеличить и написать миграцию.
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// Стратегия миграции при изменении схемы.
   @override
@@ -59,6 +59,11 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             // v4 → v5: текущий уровень топлива
             await migrator.addColumn(carTable, carTable.currentFuelLevel);
+          }
+          if (from < 6) {
+            // v5 → v6: техосмотр
+            await migrator.addColumn(carTable, carTable.techInspectionFilePath);
+            await migrator.addColumn(carTable, carTable.techInspectionExpiryDate);
           }
         },
       );

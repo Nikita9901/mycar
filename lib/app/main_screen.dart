@@ -63,6 +63,10 @@ class _MainScreenState extends State<MainScreen> {
         listenWhen: (_, curr) => curr is TripFinished,
         listener: (context, state) {
           if (state is TripFinished) {
+            // Обновляем уровень топлива по итогам поездки
+            context.read<CarHomeCubit>().updateFuelAfterTrip(
+                  state.distanceMeters / 1000,
+                );
             // Ждём пока TripActiveSheet закроется, потом показываем итоги
             Future.delayed(const Duration(milliseconds: 350), () {
               if (context.mounted) TripResultSheet.show(context, state);
@@ -466,15 +470,18 @@ class _TripNavButton extends StatelessWidget {
                     context.read<TripTrackingCubit>().startTrip();
                   }
                 },
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: AnimatedContainer(
+          child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
               width: 60,
               decoration: BoxDecoration(
                 color: isActive ? AppColors.green.withAlpha(35) : Colors.transparent,
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(22),
+                  bottomLeft: Radius.circular(22),
+                  topRight: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -521,7 +528,6 @@ class _TripNavButton extends StatelessWidget {
                     ),
                 ],
               ),
-            ),
           ),
         );
       },
