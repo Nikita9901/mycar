@@ -73,6 +73,12 @@ flutter_launcher_icons:
   web:
     generate: false
 
+flutter_launcher_icons_round:
+  android: "ic_launcher_round"
+  ios: false
+  image_path: "assets/round-icon.png"
+  min_sdk_android: 21
+
 flutter:
   uses-material-design: true
 
