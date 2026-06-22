@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/bluetooth_auto_trip_service.dart';
 import '../../../../core/services/settings_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../bloc/car_home_cubit.dart';
@@ -96,6 +99,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 const SizedBox(height: 24),
+
+                // ── Bluetooth ────────────────────────────────────────────────
+                if (Platform.isAndroid) ...[
+                  _SectionLabel(label: 'Bluetooth'),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _BluetoothSettings(onChanged: () => setState(() {})),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // ── Автомобиль ───────────────────────────────────────────
                 _SectionLabel(label: 'Автомобиль'),
@@ -433,6 +447,139 @@ class _InfoRow extends StatelessWidget {
           Text(value, style: GoogleFonts.manrope(
             fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.text1,
           )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bluetooth auto-trip settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BluetoothSettings extends StatefulWidget {
+  const _BluetoothSettings({required this.onChanged});
+  final VoidCallback onChanged;
+
+  @override
+  State<_BluetoothSettings> createState() => _BluetoothSettingsState();
+}
+
+class _BluetoothSettingsState extends State<_BluetoothSettings> {
+  final _bt = BluetoothAutoTripService.instance;
+  bool _enabled = false;
+  String? _deviceName;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final enabled = await _bt.isEnabled;
+    final name = await _bt.linkedDeviceName;
+    if (mounted) setState(() { _enabled = enabled; _deviceName = name; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bg1,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border1, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          // Переключатель авто-поездки
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    color: AppColors.blue.withAlpha(25),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.bluetooth_rounded,
+                      size: 17, color: AppColors.blue),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Авто-поездка',
+                          style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text1)),
+                      Text(
+                        _deviceName != null
+                            ? 'Привязано: $_deviceName'
+                            : 'Подключитесь к BT-устройству в авто',
+                        style: GoogleFonts.manrope(
+                            fontSize: 11, color: AppColors.text3),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _enabled && _deviceName != null,
+                  onChanged: _deviceName == null
+                      ? null
+                      : (v) async {
+                          await _bt.setEnabled(v);
+                          setState(() => _enabled = v);
+                          widget.onChanged();
+                        },
+                  activeThumbColor: AppColors.blue,
+                  trackColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppColors.blue.withAlpha(80);
+                    }
+                    return AppColors.bg3;
+                  }),
+                ),
+              ],
+            ),
+          ),
+
+          // Кнопка отвязать устройство (если привязано)
+          if (_deviceName != null) ...[
+            Divider(height: 0.5, color: AppColors.border1, indent: 16, endIndent: 16),
+            GestureDetector(
+              onTap: () async {
+                await _bt.removeCarDevice();
+                await _load();
+                widget.onChanged();
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34, height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.red.withAlpha(20),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.bluetooth_disabled_rounded,
+                          size: 17, color: AppColors.red),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Отвязать устройство',
+                        style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.red)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

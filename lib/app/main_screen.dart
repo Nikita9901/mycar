@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/di/injection_container.dart';
+import '../core/services/bluetooth_auto_trip_service.dart';
 import '../core/theme/app_theme.dart';
 import '../features/analytics/presentation/pages/analytics_screen.dart';
 import '../features/car/presentation/bloc/car_home_cubit.dart';
@@ -30,6 +34,133 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  Timer? _btTimer;
+  bool _btDialogShowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkBtFlags());
+      _btTimer = Timer.periodic(const Duration(seconds: 2), (_) => _checkBtFlags());
+    }
+  }
+
+  @override
+  void dispose() {
+    _btTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkBtFlags() async {
+    if (!mounted) return;
+    final bt = BluetoothAutoTripService.instance;
+    final cubit = context.read<TripTrackingCubit>();
+    final tripState = cubit.state;
+
+    // Автостарт поездки
+    if (await bt.checkAndClearStartRequest()) {
+      if (tripState is TripIdle || tripState is TripFinished) {
+        cubit.startTrip();
+      }
+      return;
+    }
+
+    // Автостоп поездки
+    if (await bt.checkAndClearStopRequest()) {
+      if (tripState is TripInProgress) {
+        cubit.stopTrip();
+      }
+      return;
+    }
+
+    // Диалог привязки нового устройства
+    if (_btDialogShowing) return;
+    final pending = await bt.getPendingDevice();
+    if (pending != null && mounted) {
+      _btDialogShowing = true;
+      await _showLinkDeviceDialog(pending);
+      _btDialogShowing = false;
+    }
+  }
+
+  Future<void> _showLinkDeviceDialog(BtPendingDevice device) async {
+    final bt = BluetoothAutoTripService.instance;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bg2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Это ваш автомобиль?',
+          style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w700, color: AppColors.text1),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Обнаружено Bluetooth-устройство:',
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.text3),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.bg3,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.bluetooth_rounded,
+                      size: 18, color: AppColors.blue),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      device.name,
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Если да — поездка будет начинаться автоматически при подключении и завершаться при отключении.',
+              style: GoogleFonts.manrope(fontSize: 13, color: AppColors.text2),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await bt.clearPendingDevice();
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: Text('Нет',
+                style: GoogleFonts.manrope(color: AppColors.text3)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await bt.saveCarDevice(device.address, device.name);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: Text(
+              'Да, привязать',
+              style: GoogleFonts.manrope(
+                  color: AppColors.blue, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
