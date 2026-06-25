@@ -469,6 +469,7 @@ class _BluetoothSettingsState extends State<_BluetoothSettings> {
   final _bt = BluetoothAutoTripService.instance;
   bool _enabled = false;
   String? _deviceName;
+  bool _loadingDevices = false;
 
   @override
   void initState() {
@@ -482,6 +483,72 @@ class _BluetoothSettingsState extends State<_BluetoothSettings> {
     if (mounted) setState(() { _enabled = enabled; _deviceName = name; });
   }
 
+  Future<void> _pickDevice() async {
+    setState(() => _loadingDevices = true);
+    final devices = await _bt.getPairedDevices();
+    setState(() => _loadingDevices = false);
+    if (!mounted) return;
+
+    if (devices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Нет сопряжённых Bluetooth-устройств',
+              style: GoogleFonts.manrope()),
+          backgroundColor: AppColors.bg3,
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bg2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Выберите устройство',
+            style: GoogleFonts.manrope(
+                fontWeight: FontWeight.w700, color: AppColors.text1)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: devices.length,
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: AppColors.border1),
+            itemBuilder: (_, i) {
+              final d = devices[i];
+              return ListTile(
+                leading: const Icon(Icons.bluetooth_rounded,
+                    color: AppColors.blue),
+                title: Text(d.name,
+                    style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text1)),
+                subtitle: Text(d.address,
+                    style: GoogleFonts.manrope(
+                        fontSize: 11, color: AppColors.text3)),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await _bt.saveCarDevice(d.address, d.name);
+                  await _load();
+                  widget.onChanged();
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Отмена',
+                style: GoogleFonts.manrope(color: AppColors.text3)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -492,7 +559,7 @@ class _BluetoothSettingsState extends State<_BluetoothSettings> {
       ),
       child: Column(
         children: [
-          // Переключатель авто-поездки
+          // Статус + переключатель
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
@@ -518,37 +585,75 @@ class _BluetoothSettingsState extends State<_BluetoothSettings> {
                               color: AppColors.text1)),
                       Text(
                         _deviceName != null
-                            ? 'Привязано: $_deviceName'
-                            : 'Подключитесь к BT-устройству в авто',
+                            ? _deviceName!
+                            : 'Устройство не выбрано',
                         style: GoogleFonts.manrope(
                             fontSize: 11, color: AppColors.text3),
                       ),
                     ],
                   ),
                 ),
-                Switch(
-                  value: _enabled && _deviceName != null,
-                  onChanged: _deviceName == null
-                      ? null
-                      : (v) async {
-                          await _bt.setEnabled(v);
-                          setState(() => _enabled = v);
-                          widget.onChanged();
-                        },
-                  activeThumbColor: AppColors.blue,
-                  trackColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return AppColors.blue.withAlpha(80);
-                    }
-                    return AppColors.bg3;
-                  }),
-                ),
+                if (_deviceName != null)
+                  Switch(
+                    value: _enabled,
+                    onChanged: (v) async {
+                      await _bt.setEnabled(v);
+                      setState(() => _enabled = v);
+                      widget.onChanged();
+                    },
+                    activeThumbColor: AppColors.blue,
+                    trackColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppColors.blue.withAlpha(80);
+                      }
+                      return AppColors.bg3;
+                    }),
+                  ),
               ],
             ),
           ),
 
-          // Кнопка отвязать устройство (если привязано)
+          // Выбрать / сменить устройство
+          Divider(height: 0.5, color: AppColors.border1, indent: 16, endIndent: 16),
+          GestureDetector(
+            onTap: _loadingDevices ? null : _pickDevice,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 10, 16, _deviceName != null ? 0 : 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: _loadingDevices
+                        ? const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.green),
+                          )
+                        : const Icon(Icons.bluetooth_searching_rounded,
+                            size: 17, color: AppColors.green),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _deviceName != null
+                        ? 'Сменить устройство'
+                        : 'Выбрать Bluetooth устройство',
+                    style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.green),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Отвязать устройство (если привязано)
           if (_deviceName != null) ...[
+            const SizedBox(height: 4),
             Divider(height: 0.5, color: AppColors.border1, indent: 16, endIndent: 16),
             GestureDetector(
               onTap: () async {

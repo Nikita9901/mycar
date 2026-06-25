@@ -41,6 +41,15 @@ import '../../features/history/presentation/bloc/history_cubit.dart';
 // Analytics
 import '../../features/analytics/presentation/bloc/analytics_cubit.dart';
 
+// Trip log
+import '../../features/trip/data/datasources/trip_log_local_datasource.dart';
+import '../../features/trip/data/repositories/trip_log_repository_impl.dart';
+import '../../features/trip/domain/repositories/trip_log_repository.dart';
+import '../../features/trip/domain/usecases/confirm_trip_log.dart';
+import '../../features/trip/domain/usecases/delete_trip_log.dart';
+import '../../features/trip/domain/usecases/get_pending_trip_logs.dart';
+import '../../features/trip/domain/usecases/save_trip_log.dart';
+
 final GetIt sl = GetIt.instance;
 
 Future<void> initDependencies() async {
@@ -86,6 +95,14 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetExpensesForCar(sl()));
   sl.registerLazySingleton(() => WatchExpensesForCar(sl()));
   sl.registerLazySingleton(() => DeleteExpense(sl()));
+
+  // Trip log
+  sl.registerLazySingleton(() => TripLogLocalDatasource(sl()));
+  sl.registerLazySingleton<TripLogRepository>(() => TripLogRepositoryImpl(sl()));
+  sl.registerLazySingleton(() => SaveTripLog(sl()));
+  sl.registerLazySingleton(() => ConfirmTripLog(sl()));
+  sl.registerLazySingleton(() => DeleteTripLog(sl()));
+  sl.registerLazySingleton(() => GetPendingTripLogs(sl()));
 
   // History
   sl.registerFactory(() => HistoryCubit(

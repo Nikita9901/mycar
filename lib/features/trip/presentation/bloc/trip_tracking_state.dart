@@ -64,10 +64,16 @@ class TripFinished extends TripTrackingState {
   const TripFinished({
     required this.distanceMeters,
     required this.durationSeconds,
+    required this.startTime,
+    this.tripLogId,
+    this.autoTrip = false,
   });
 
   final double distanceMeters;
   final int durationSeconds;
+  final DateTime startTime;
+  final String? tripLogId; // ID записи в БД (null если не сохранена)
+  final bool autoTrip;
 
   double get distanceKm => distanceMeters / 1000;
   int get distanceKmRounded => (distanceMeters / 1000).round();
@@ -82,5 +88,5 @@ class TripFinished extends TripTrackingState {
   }
 
   @override
-  List<Object?> get props => [distanceMeters, durationSeconds];
+  List<Object?> get props => [distanceMeters, durationSeconds, startTime, tripLogId, autoTrip];
 }

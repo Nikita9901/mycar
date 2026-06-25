@@ -7,7 +7,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../core/di/injection_container.dart';
 import '../core/services/bluetooth_auto_trip_service.dart';
+import '../core/services/trip_background_service.dart';
 import '../core/theme/app_theme.dart';
+import '../features/trip/domain/entities/trip_log_entry.dart';
+import '../features/trip/domain/usecases/confirm_trip_log.dart';
+import '../features/trip/domain/usecases/delete_trip_log.dart';
+import '../features/trip/domain/usecases/get_pending_trip_logs.dart';
+import '../features/trip/domain/usecases/save_trip_log.dart';
+import '../features/trip/presentation/widgets/pending_trips_sheet.dart';
 import '../features/analytics/presentation/pages/analytics_screen.dart';
 import '../features/car/presentation/bloc/car_home_cubit.dart';
 import '../features/car/presentation/bloc/car_home_state.dart';
@@ -19,6 +26,7 @@ import '../features/history/presentation/bloc/history_cubit.dart';
 import '../features/history/presentation/pages/history_screen.dart';
 import '../features/refueling/presentation/widgets/add_refueling_sheet.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/trip/presentation/bloc/trip_tracking_cubit.dart';
 import '../features/trip/presentation/bloc/trip_tracking_state.dart';
@@ -32,36 +40,122 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   Timer? _btTimer;
   bool _btDialogShowing = false;
+  bool _pendingSheetShowing = false;
+
+  // Cubits созданы как поля, чтобы к ним можно было обращаться без context
+  late final CarHomeCubit _carCubit = CarHomeCubit(
+    watchAllCars: sl(),
+    getRefuelingsForCar: sl(),
+    calculateFuelConsumption: sl(),
+    updateCar: sl(),
+    addCar: sl(),
+    addRefueling: sl(),
+    addExpense: sl(),
+    deleteRefueling: sl(),
+    deleteExpense: sl(),
+    deleteAllCarData: sl(),
+  )..loadGarage();
+  late final HistoryCubit _historyCubit = sl<HistoryCubit>()..load();
+  late final AnalyticsCubit _analyticsCubit = sl<AnalyticsCubit>()..load();
+  late final TripTrackingCubit _tripCubit = TripTrackingCubit();
 
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkBtFlags());
-      _btTimer = Timer.periodic(const Duration(seconds: 2), (_) => _checkBtFlags());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Platform.isAndroid) _checkBtFlags();
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) _checkPendingTrips();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && Platform.isAndroid) {
+      _checkBtFlags();
+      _checkPendingTrips();
     }
+  }
+
+  /// Если фоновый сервис завершил поездку — сохраняем её в БД как неподтверждённую.
+  Future<void> _saveBgTripIfPending() async {
+    if (!Platform.isAndroid) return;
+    final prefs = await SharedPreferences.getInstance();
+    final pending = prefs.getBool(bgTripPendingKey) ?? false;
+    if (!pending) return;
+
+    final distanceKm      = prefs.getDouble(bgTripDistanceKmKey) ?? 0;
+    final durationSeconds = prefs.getInt(bgTripDurationSecondsKey) ?? 0;
+    final startTimeStr    = prefs.getString(bgTripStartTimeKey);
+
+    // Очищаем флаги немедленно, чтобы не сохранить дважды
+    await prefs.remove(bgTripPendingKey);
+    await prefs.remove(bgTripDistanceKmKey);
+    await prefs.remove(bgTripDurationSecondsKey);
+    await prefs.remove(bgTripStartTimeKey);
+
+    if (distanceKm <= 0 || startTimeStr == null) return;
+
+    final carState = _carCubit.state;
+    if (carState is! CarHomeLoaded) return;
+
+    final startTime = DateTime.tryParse(startTimeStr) ?? DateTime.now();
+    try {
+      await sl<SaveTripLog>()(TripLogEntry(
+        id: _uuid(),
+        carId: carState.car.id,
+        startTime: startTime,
+        endTime: startTime.add(Duration(seconds: durationSeconds)),
+        distanceKm: distanceKm,
+        durationSeconds: durationSeconds,
+        confirmed: false,
+        autoTrip: true,
+      ));
+    } catch (_) {}
+  }
+
+  Future<void> _checkPendingTrips() async {
+    if (_pendingSheetShowing) return;
+    await _saveBgTripIfPending();
+    final carState = _carCubit.state;
+    if (carState is! CarHomeLoaded) return;
+    final trips = await sl<GetPendingTripLogs>()(carState.car.id);
+    if (trips.isEmpty || !mounted) return;
+    _pendingSheetShowing = true;
+    await PendingTripsSheet.show(context, trips, carState.car);
+    _pendingSheetShowing = false;
+  }
+
+  static String _uuid() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return '${now}_${now.hashCode.abs()}';
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _btTimer?.cancel();
+    _carCubit.close();
+    _historyCubit.close();
+    _analyticsCubit.close();
+    _tripCubit.close();
     super.dispose();
   }
 
   Future<void> _checkBtFlags() async {
     if (!mounted) return;
     final bt = BluetoothAutoTripService.instance;
-    final cubit = context.read<TripTrackingCubit>();
-    final tripState = cubit.state;
+    final tripState = _tripCubit.state;
 
     // Автостарт поездки
     if (await bt.checkAndClearStartRequest()) {
       if (tripState is TripIdle || tripState is TripFinished) {
-        cubit.startTrip();
+        _tripCubit.startTrip();
       }
       return;
     }
@@ -69,7 +163,7 @@ class _MainScreenState extends State<MainScreen> {
     // Автостоп поездки
     if (await bt.checkAndClearStopRequest()) {
       if (tripState is TripInProgress) {
-        cubit.stopTrip();
+        _tripCubit.stopTrip(autoTrip: true);
       }
       return;
     }
@@ -166,41 +260,52 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<CarHomeCubit>(
-          create: (_) => CarHomeCubit(
-            watchAllCars: sl(),
-            getRefuelingsForCar: sl(),
-            calculateFuelConsumption: sl(),
-            updateCar: sl(),
-            addCar: sl(),
-            addRefueling: sl(),
-            addExpense: sl(),
-            deleteRefueling: sl(),
-            deleteExpense: sl(),
-            deleteAllCarData: sl(),
-          )..loadGarage(),
-        ),
-        BlocProvider<HistoryCubit>(
-          create: (_) => (sl<HistoryCubit>())..load(),
-        ),
-        BlocProvider<AnalyticsCubit>(
-          create: (_) => (sl<AnalyticsCubit>())..load(),
-        ),
-        BlocProvider<TripTrackingCubit>(
-          create: (_) => TripTrackingCubit(),
-        ),
+        BlocProvider<CarHomeCubit>.value(value: _carCubit),
+        BlocProvider<HistoryCubit>.value(value: _historyCubit),
+        BlocProvider<AnalyticsCubit>.value(value: _analyticsCubit),
+        BlocProvider<TripTrackingCubit>.value(value: _tripCubit),
       ],
       child: BlocListener<TripTrackingCubit, TripTrackingState>(
         listenWhen: (_, curr) => curr is TripFinished,
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is TripFinished) {
             // Обновляем уровень топлива по итогам поездки
             context.read<CarHomeCubit>().updateFuelAfterTrip(
                   state.distanceMeters / 1000,
                 );
-            // Ждём пока TripActiveSheet закроется, потом показываем итоги
+
+            // Сохраняем поездку в БД (неподтверждённой)
+            String? tripLogId;
+            final carState = context.read<CarHomeCubit>().state;
+            if (carState is CarHomeLoaded) {
+              try {
+                tripLogId = _uuid();
+                await sl<SaveTripLog>()(TripLogEntry(
+                  id: tripLogId,
+                  carId: carState.car.id,
+                  startTime: state.startTime,
+                  endTime: DateTime.now(),
+                  distanceKm: state.distanceMeters / 1000,
+                  durationSeconds: state.durationSeconds,
+                  confirmed: false,
+                  autoTrip: state.autoTrip,
+                ));
+              } catch (_) {
+                tripLogId = null;
+              }
+            }
+
+            // Показываем итоги поездки
+            final finishedWithId = TripFinished(
+              distanceMeters: state.distanceMeters,
+              durationSeconds: state.durationSeconds,
+              startTime: state.startTime,
+              tripLogId: tripLogId,
+              autoTrip: state.autoTrip,
+            );
+
             Future.delayed(const Duration(milliseconds: 350), () {
-              if (context.mounted) TripResultSheet.show(context, state);
+              if (context.mounted) TripResultSheet.show(context, finishedWithId);
             });
           }
         },

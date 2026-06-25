@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/sheet_widgets.dart';
 import '../../../car/presentation/bloc/car_home_cubit.dart';
 import '../../../car/presentation/bloc/car_home_state.dart';
+import '../../domain/usecases/confirm_trip_log.dart';
 import '../bloc/trip_tracking_cubit.dart';
 import '../bloc/trip_tracking_state.dart';
 
@@ -130,6 +132,7 @@ class TripResultSheet extends StatelessWidget {
               width: double.infinity,
               child: _SaveButton(
                 distanceKm: result.distanceKmRounded,
+                tripLogId: result.tripLogId,
               ),
             ),
 
@@ -227,8 +230,9 @@ class _StatRow extends StatelessWidget {
 }
 
 class _SaveButton extends StatefulWidget {
-  const _SaveButton({required this.distanceKm});
+  const _SaveButton({required this.distanceKm, this.tripLogId});
   final int distanceKm;
+  final String? tripLogId;
 
   @override
   State<_SaveButton> createState() => _SaveButtonState();
@@ -273,9 +277,11 @@ class _SaveButtonState extends State<_SaveButton> {
     final carCubit = context.read<CarHomeCubit>();
     final carState = carCubit.state;
     if (carState is CarHomeLoaded) {
-      final newOdo =
-          carState.car.currentOdometer + widget.distanceKm;
+      final newOdo = carState.car.currentOdometer + widget.distanceKm;
       await carCubit.updateOdometer(newOdo);
+    }
+    if (widget.tripLogId != null) {
+      try { await sl<ConfirmTripLog>()(widget.tripLogId!); } catch (_) {}
     }
     if (mounted) {
       context.read<TripTrackingCubit>().dismiss();

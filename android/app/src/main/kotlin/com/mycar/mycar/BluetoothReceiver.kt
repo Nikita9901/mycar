@@ -25,7 +25,9 @@ class BluetoothReceiver : BroadcastReceiver() {
                     ?: "Bluetooth устройство"
 
                 if (autoTripEnabled && carAddress != null && deviceAddress == carAddress) {
-                    // Это наш автомобиль — просим запустить поездку
+                    // Это наш автомобиль — ставим флаг и запускаем приложение.
+                    // Если оно уже открыто — lifecycle-событие сработает и cubit обработает флаг.
+                    // Если закрыто — фоновый сервис подхватит флаг через 5 сек как fallback.
                     prefs.edit()
                         .putBoolean("flutter.bt_trip_start_requested", true)
                         .apply()

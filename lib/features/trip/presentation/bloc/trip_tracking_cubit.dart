@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../core/services/bluetooth_auto_trip_service.dart';
 import '../../../../core/services/trip_notification_service.dart';
 import 'trip_tracking_state.dart';
 
@@ -20,6 +21,7 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
   double _totalDistanceMeters = 0;
   int _elapsedSeconds = 0;
   double _currentSpeedKmh = 0;
+  DateTime _startTime = DateTime.now();
 
   static const double _minAccuracyMeters = 50;
   static const double _minDistanceBetweenPointsMeters = 5;
@@ -35,6 +37,7 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
     _elapsedSeconds = 0;
     _currentSpeedKmh = 0;
     _lastPosition = null;
+    _startTime = DateTime.now();
 
     emit(const TripInProgress(
       distanceMeters: 0,
@@ -47,9 +50,15 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
       _elapsedSeconds++;
       _emitProgress();
       _updateNotification();
-      // Проверяем флаг остановки от фонового уведомления
+      // Проверяем флаг остановки от кнопки уведомления
       if (await TripNotificationService.instance.checkAndClearStopRequest()) {
         stopTrip();
+        return;
+      }
+      // Проверяем флаг остановки от отключения Bluetooth
+      if (Platform.isAndroid &&
+          await BluetoothAutoTripService.instance.checkAndClearStopRequest()) {
+        stopTrip(autoTrip: true);
       }
     });
     _updateNotification(); // сразу при старте
@@ -118,12 +127,15 @@ class TripTrackingCubit extends Cubit<TripTrackingState> {
   }
 
   /// Завершает поездку.
-  Future<TripFinished> stopTrip() async {
+  Future<TripFinished> stopTrip({bool autoTrip = false}) async {
+    final endTime = DateTime.now();
     await _stopTracking();
     await TripNotificationService.instance.cancel();
     final finished = TripFinished(
       distanceMeters: _totalDistanceMeters,
       durationSeconds: _elapsedSeconds,
+      startTime: _startTime,
+      autoTrip: autoTrip,
     );
     emit(finished);
     return finished;

@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../features/car/data/models/car_table.dart';
 import '../../features/refueling/data/models/refueling_table.dart';
 import '../../features/expense/data/models/expense_table.dart';
+import '../../features/trip/data/models/trip_log_table.dart';
 
 // Директива part подключает сгенерированный файл.
 // Он появится после запуска build_runner.
@@ -26,6 +27,7 @@ part 'app_database.g.dart';
     CarTable,
     RefuelingTable,
     ExpenseTable,
+    TripLogTable,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -33,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Версия схемы. При изменении таблиц — увеличить и написать миграцию.
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// Стратегия миграции при изменении схемы.
   @override
@@ -64,6 +66,10 @@ class AppDatabase extends _$AppDatabase {
             // v5 → v6: техосмотр
             await migrator.addColumn(carTable, carTable.techInspectionFilePath);
             await migrator.addColumn(carTable, carTable.techInspectionExpiryDate);
+          }
+          if (from < 7) {
+            // v6 → v7: история поездок
+            await migrator.createTable(tripLogTable);
           }
         },
       );

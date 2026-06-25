@@ -2018,6 +2018,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CarTableTable carTable = $CarTableTable(this);
   late final $RefuelingTableTable refuelingTable = $RefuelingTableTable(this);
   late final $ExpenseTableTable expenseTable = $ExpenseTableTable(this);
+  late final $TripLogTableTable tripLogTable = $TripLogTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2026,6 +2027,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     carTable,
     refuelingTable,
     expenseTable,
+    tripLogTable,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3380,6 +3382,347 @@ typedef $$ExpenseTableTableProcessedTableManager =
       ExpenseTableData,
       PrefetchHooks Function({bool carId})
     >;
+
+// ─── TripLogTable ─────────────────────────────────────────────────────────────
+
+class $TripLogTableTable extends TripLogTable
+    with TableInfo<$TripLogTableTable, TripLogTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TripLogTableTable(this.attachedDatabase, [this._alias]);
+
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _carIdMeta = const VerificationMeta('carId');
+  @override
+  late final GeneratedColumn<String> carId = GeneratedColumn<String>(
+    'car_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _startTimeMeta = const VerificationMeta('startTime');
+  @override
+  late final GeneratedColumn<DateTime> startTime = GeneratedColumn<DateTime>(
+    'start_time', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _endTimeMeta = const VerificationMeta('endTime');
+  @override
+  late final GeneratedColumn<DateTime> endTime = GeneratedColumn<DateTime>(
+    'end_time', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _distanceKmMeta = const VerificationMeta('distanceKm');
+  @override
+  late final GeneratedColumn<double> distanceKm = GeneratedColumn<double>(
+    'distance_km', aliasedName, false, type: DriftSqlType.double, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _durationSecondsMeta = const VerificationMeta('durationSeconds');
+  @override
+  late final GeneratedColumn<int> durationSeconds = GeneratedColumn<int>(
+    'duration_seconds', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true,
+  );
+
+  static const VerificationMeta _confirmedMeta = const VerificationMeta('confirmed');
+  @override
+  late final GeneratedColumn<bool> confirmed = GeneratedColumn<bool>(
+    'confirmed', aliasedName, false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("confirmed" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+
+  static const VerificationMeta _autoTripMeta = const VerificationMeta('autoTrip');
+  @override
+  late final GeneratedColumn<bool> autoTrip = GeneratedColumn<bool>(
+    'auto_trip', aliasedName, false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("auto_trip" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, carId, startTime, endTime, distanceKm, durationSeconds, confirmed, autoTrip];
+
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trip_log_table';
+
+  @override
+  VerificationContext validateIntegrity(Insertable<TripLogTableData> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('car_id')) {
+      context.handle(_carIdMeta, carId.isAcceptableOrUnknown(data['car_id']!, _carIdMeta));
+    } else if (isInserting) {
+      context.missing(_carIdMeta);
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(_startTimeMeta, startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta));
+    } else if (isInserting) {
+      context.missing(_startTimeMeta);
+    }
+    if (data.containsKey('end_time')) {
+      context.handle(_endTimeMeta, endTime.isAcceptableOrUnknown(data['end_time']!, _endTimeMeta));
+    } else if (isInserting) {
+      context.missing(_endTimeMeta);
+    }
+    if (data.containsKey('distance_km')) {
+      context.handle(_distanceKmMeta, distanceKm.isAcceptableOrUnknown(data['distance_km']!, _distanceKmMeta));
+    } else if (isInserting) {
+      context.missing(_distanceKmMeta);
+    }
+    if (data.containsKey('duration_seconds')) {
+      context.handle(_durationSecondsMeta, durationSeconds.isAcceptableOrUnknown(data['duration_seconds']!, _durationSecondsMeta));
+    } else if (isInserting) {
+      context.missing(_durationSecondsMeta);
+    }
+    if (data.containsKey('confirmed')) {
+      context.handle(_confirmedMeta, confirmed.isAcceptableOrUnknown(data['confirmed']!, _confirmedMeta));
+    }
+    if (data.containsKey('auto_trip')) {
+      context.handle(_autoTripMeta, autoTrip.isAcceptableOrUnknown(data['auto_trip']!, _autoTripMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+
+  @override
+  TripLogTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TripLogTableData(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      carId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}car_id'])!,
+      startTime: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}start_time'])!,
+      endTime: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}end_time'])!,
+      distanceKm: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}distance_km'])!,
+      durationSeconds: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}duration_seconds'])!,
+      confirmed: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}confirmed'])!,
+      autoTrip: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}auto_trip'])!,
+    );
+  }
+
+  @override
+  $TripLogTableTable createAlias(String alias) => $TripLogTableTable(attachedDatabase, alias);
+}
+
+class TripLogTableData extends DataClass implements Insertable<TripLogTableData> {
+  final String id;
+  final String carId;
+  final DateTime startTime;
+  final DateTime endTime;
+  final double distanceKm;
+  final int durationSeconds;
+  final bool confirmed;
+  final bool autoTrip;
+
+  const TripLogTableData({
+    required this.id,
+    required this.carId,
+    required this.startTime,
+    required this.endTime,
+    required this.distanceKm,
+    required this.durationSeconds,
+    required this.confirmed,
+    required this.autoTrip,
+  });
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['car_id'] = Variable<String>(carId);
+    map['start_time'] = Variable<DateTime>(startTime);
+    map['end_time'] = Variable<DateTime>(endTime);
+    map['distance_km'] = Variable<double>(distanceKm);
+    map['duration_seconds'] = Variable<int>(durationSeconds);
+    map['confirmed'] = Variable<bool>(confirmed);
+    map['auto_trip'] = Variable<bool>(autoTrip);
+    return map;
+  }
+
+  TripLogTableCompanion toCompanion(bool nullToAbsent) => TripLogTableCompanion(
+    id: Value(id),
+    carId: Value(carId),
+    startTime: Value(startTime),
+    endTime: Value(endTime),
+    distanceKm: Value(distanceKm),
+    durationSeconds: Value(durationSeconds),
+    confirmed: Value(confirmed),
+    autoTrip: Value(autoTrip),
+  );
+
+  factory TripLogTableData.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TripLogTableData(
+      id: serializer.fromJson<String>(json['id']),
+      carId: serializer.fromJson<String>(json['carId']),
+      startTime: serializer.fromJson<DateTime>(json['startTime']),
+      endTime: serializer.fromJson<DateTime>(json['endTime']),
+      distanceKm: serializer.fromJson<double>(json['distanceKm']),
+      durationSeconds: serializer.fromJson<int>(json['durationSeconds']),
+      confirmed: serializer.fromJson<bool>(json['confirmed']),
+      autoTrip: serializer.fromJson<bool>(json['autoTrip']),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return {
+      'id': serializer.toJson<String>(id),
+      'carId': serializer.toJson<String>(carId),
+      'startTime': serializer.toJson<DateTime>(startTime),
+      'endTime': serializer.toJson<DateTime>(endTime),
+      'distanceKm': serializer.toJson<double>(distanceKm),
+      'durationSeconds': serializer.toJson<int>(durationSeconds),
+      'confirmed': serializer.toJson<bool>(confirmed),
+      'autoTrip': serializer.toJson<bool>(autoTrip),
+    };
+  }
+
+  TripLogTableData copyWith({
+    String? id,
+    String? carId,
+    DateTime? startTime,
+    DateTime? endTime,
+    double? distanceKm,
+    int? durationSeconds,
+    bool? confirmed,
+    bool? autoTrip,
+  }) => TripLogTableData(
+    id: id ?? this.id,
+    carId: carId ?? this.carId,
+    startTime: startTime ?? this.startTime,
+    endTime: endTime ?? this.endTime,
+    distanceKm: distanceKm ?? this.distanceKm,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    confirmed: confirmed ?? this.confirmed,
+    autoTrip: autoTrip ?? this.autoTrip,
+  );
+
+  @override
+  String toString() =>
+      'TripLogTableData(id: $id, carId: $carId, startTime: $startTime, endTime: $endTime, '
+      'distanceKm: $distanceKm, durationSeconds: $durationSeconds, confirmed: $confirmed, autoTrip: $autoTrip)';
+
+  @override
+  int get hashCode => Object.hash(id, carId, startTime, endTime, distanceKm, durationSeconds, confirmed, autoTrip);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TripLogTableData &&
+          other.id == id &&
+          other.carId == carId &&
+          other.startTime == startTime &&
+          other.endTime == endTime &&
+          other.distanceKm == distanceKm &&
+          other.durationSeconds == durationSeconds &&
+          other.confirmed == confirmed &&
+          other.autoTrip == autoTrip);
+}
+
+class TripLogTableCompanion extends UpdateCompanion<TripLogTableData> {
+  final Value<String> id;
+  final Value<String> carId;
+  final Value<DateTime> startTime;
+  final Value<DateTime> endTime;
+  final Value<double> distanceKm;
+  final Value<int> durationSeconds;
+  final Value<bool> confirmed;
+  final Value<bool> autoTrip;
+  final Value<int> rowid;
+
+  const TripLogTableCompanion({
+    this.id = const Value.absent(),
+    this.carId = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.endTime = const Value.absent(),
+    this.distanceKm = const Value.absent(),
+    this.durationSeconds = const Value.absent(),
+    this.confirmed = const Value.absent(),
+    this.autoTrip = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+
+  TripLogTableCompanion.insert({
+    required String id,
+    required String carId,
+    required DateTime startTime,
+    required DateTime endTime,
+    required double distanceKm,
+    required int durationSeconds,
+    this.confirmed = const Value.absent(),
+    this.autoTrip = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        carId = Value(carId),
+        startTime = Value(startTime),
+        endTime = Value(endTime),
+        distanceKm = Value(distanceKm),
+        durationSeconds = Value(durationSeconds);
+
+  TripLogTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? carId,
+    Value<DateTime>? startTime,
+    Value<DateTime>? endTime,
+    Value<double>? distanceKm,
+    Value<int>? durationSeconds,
+    Value<bool>? confirmed,
+    Value<bool>? autoTrip,
+    Value<int>? rowid,
+  }) => TripLogTableCompanion(
+    id: id ?? this.id,
+    carId: carId ?? this.carId,
+    startTime: startTime ?? this.startTime,
+    endTime: endTime ?? this.endTime,
+    distanceKm: distanceKm ?? this.distanceKm,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    confirmed: confirmed ?? this.confirmed,
+    autoTrip: autoTrip ?? this.autoTrip,
+    rowid: rowid ?? this.rowid,
+  );
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) map['id'] = Variable<String>(id.value);
+    if (carId.present) map['car_id'] = Variable<String>(carId.value);
+    if (startTime.present) map['start_time'] = Variable<DateTime>(startTime.value);
+    if (endTime.present) map['end_time'] = Variable<DateTime>(endTime.value);
+    if (distanceKm.present) map['distance_km'] = Variable<double>(distanceKm.value);
+    if (durationSeconds.present) map['duration_seconds'] = Variable<int>(durationSeconds.value);
+    if (confirmed.present) map['confirmed'] = Variable<bool>(confirmed.value);
+    if (autoTrip.present) map['auto_trip'] = Variable<bool>(autoTrip.value);
+    if (rowid.present) map['rowid'] = Variable<int>(rowid.value);
+    return map;
+  }
+
+  @override
+  String toString() =>
+      'TripLogTableCompanion(id: $id, carId: $carId, startTime: $startTime, endTime: $endTime, '
+      'distanceKm: $distanceKm, durationSeconds: $durationSeconds, confirmed: $confirmed, autoTrip: $autoTrip)';
+}
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;

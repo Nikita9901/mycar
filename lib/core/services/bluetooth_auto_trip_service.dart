@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _keyCarAddress = 'bt_car_device_address';
@@ -9,6 +11,7 @@ const _keyPendingAddress = 'bt_pending_device_address';
 const _keyPendingName = 'bt_pending_device_name';
 
 typedef BtPendingDevice = ({String address, String name});
+typedef BtDevice = ({String address, String name});
 
 class BluetoothAutoTripService {
   BluetoothAutoTripService._();
@@ -60,8 +63,33 @@ class BluetoothAutoTripService {
     await prefs.remove(_keyPendingName);
   }
 
+  static const _methodChannel = MethodChannel('com.mycar.mycar/bluetooth');
+
+  /// Запрашивает BLUETOOTH_CONNECT permission (Android 12+) и возвращает список
+  /// сопряжённых Bluetooth-устройств.
+  Future<List<BtDevice>> getPairedDevices() async {
+    // Android 12+ требует runtime permission
+    final status = await Permission.bluetoothConnect.request();
+    if (!status.isGranted) return [];
+
+    try {
+      final List raw =
+          await _methodChannel.invokeMethod('getPairedDevices');
+      return raw
+          .map((d) => (
+                name: (d['name'] as String?) ?? 'Unknown',
+                address: (d['address'] as String?) ?? '',
+              ))
+          .where((d) => d.address.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<bool> checkAndClearStartRequest() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
     final requested = prefs.getBool(_keyTripStartRequested) ?? false;
     if (requested) await prefs.remove(_keyTripStartRequested);
     return requested;
@@ -69,6 +97,7 @@ class BluetoothAutoTripService {
 
   Future<bool> checkAndClearStopRequest() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
     final requested = prefs.getBool(_keyTripStopRequested) ?? false;
     if (requested) await prefs.remove(_keyTripStopRequested);
     return requested;

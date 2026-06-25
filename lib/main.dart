@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/di/injection_container.dart';
 import 'core/services/settings_service.dart';
+import 'core/services/trip_background_service.dart';
 import 'core/services/trip_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/currency_provider.dart';
@@ -14,6 +15,7 @@ Future<void> main() async {
   await initializeDateFormatting('ru_RU');
   await initDependencies();
   await TripNotificationService.instance.init();
+  await initializeTripBackgroundService();
   runApp(const MyCarApp());
 }
 
